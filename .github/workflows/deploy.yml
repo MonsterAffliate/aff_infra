@@ -28,8 +28,8 @@ jobs:
             echo "${{ github.sha }}" > deploy_version.txt
 
             # Copy files from GitHub workspace to remote server
-            rsync -avz --progress --delete -e "ssh -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
-
+            rsync -avz --progress --delete -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+            
             # Pull and deploy
             docker compose pull
             docker compose up -d --build --force-recreate --remove-orphans
