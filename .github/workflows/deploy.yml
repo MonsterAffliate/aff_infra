@@ -18,22 +18,23 @@ jobs:
           host: ${{ secrets.SERVER_DOMAIN }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Pass the local working directory to the remote server
           script: |
-            # Create directory and sync files
+            # Create directory if it doesn't exist
             mkdir -p ~/aff_infra
             cd ~/aff_infra
-            
+
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
 
-            # Export variables for rsync
-            export RSYNC_RSH="ssh -o StrictHostKeyChecking=no"
-            
+            # Copy files from GitHub workspace to remote server
+            rsync -avz --progress --delete -e "ssh -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+
             # Pull and deploy
             docker compose pull
             docker compose up -d --build --force-recreate --remove-orphans
             
-            # Wait for Nginx to be ready (simplified health check)
+            # Wait for Nginx to be ready
             timeout 30s bash -c "until curl -s -f http://localhost:80/health; do sleep 2; echo 'Checking...'; done" || {
               echo "Deployment failed, rolling back..."
               docker compose down
