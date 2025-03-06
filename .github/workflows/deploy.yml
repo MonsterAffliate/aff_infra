@@ -19,12 +19,12 @@ jobs:
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: unnecessary  # We'll handle known_hosts next
-          
+
       - name: Debug Connectivity
         run: |
-          echo "Attempting to reach ${{ secrets.SERVER_IP }}"
-          ping -c 4 ${{ secrets.SERVER_IP }} || echo "Ping failed"
-          nc -zv ${{ secrets.SERVER_IP }} 22 || echo "SSH port check failed"
+          echo "Attempting to reach ${{ secrets.SERVER_DOMAIN }}"
+          ping -c 4 ${{ secrets.SERVER_DOMAIN }} || echo "Ping failed"
+          nc -zv ${{ secrets.SERVER_DOMAIN }} 22 || echo "SSH port check failed"
 
       # Step 3: Add Known Hosts
       - name: Add Known Hosts
