@@ -12,13 +12,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Server
+      - name: Transfer files and Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_DOMAIN }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Pass the local working directory to the remote server
           script: |
             # Create directory if it doesn't exist
             mkdir -p ~/aff_infra
@@ -26,9 +25,19 @@ jobs:
 
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
+          # Run rsync separately to transfer files from runner to server
+      - name: Sync files to server
+        run: |
+          rsync -avz --progress --delete -e "ssh -i ${{ secrets.SSH_PRIVATE_KEY }} -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
 
-            # Copy files from GitHub workspace to remote server
-            rsync -avz --progress --delete -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_DOMAIN }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/aff_infra
             
             # Pull and deploy
             docker compose pull
