@@ -1,0 +1,49 @@
+name: Deploy Nginx Reverse Proxy
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up SSH key
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: unnecessary  # We'll handle known_hosts next
+
+      # Step 3: Add Known Hosts
+      - name: Add Known Hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # Step 4: Deploy to Home Server
+      - name: Deploy with Docker Compose
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            # Create project directory if it doesn't exist
+            mkdir -p ~/aff_infra
+            cd ~/aff_infra
+
+            # Copy the new files to the server
+            echo "${{ github.sha }}" > deploy_version.txt
+          EOF
+
+          # Use rsync or scp to transfer files
+          rsync -avz --progress -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/aff_infra/
+
+          # SSH again to start Docker Compose
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd ~/aff_infra
+            docker-compose down  # Stop existing containers
+            docker-compose up -d --build  # Start new containers
+            docker-compose ps  # Check status
+          EOF
