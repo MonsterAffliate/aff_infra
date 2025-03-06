@@ -44,9 +44,9 @@ jobs:
             docker-compose build
 
             # Stop and rename existing Nginx container to avoid port conflict
-            if docker ps -q -f name=aff_infra_nginx-1; then
-              docker stop aff_infra_nginx-1
-              docker rename aff_infra_nginx-1 aff_infra_nginx_old || true
+            if docker ps -q -f name=aff_infra-nginx-1; then
+              docker stop aff_infra-nginx-1
+              docker rename aff_infra-nginx-1 aff_infra-nginx_old || true
             fi
 
             # Start new containers
@@ -54,22 +54,22 @@ jobs:
 
             # Wait for Nginx to be ready
             echo "Waiting for Nginx to be ready..."
-            timeout 60s bash -c "until docker inspect aff_infra_nginx-1 --format '{{.State.Health.Status}}' | grep -q 'healthy'; do sleep 5; echo 'Checking...'; done" || {
+            timeout 60s bash -c "until docker inspect aff_infra-nginx-1 --format '{{.State.Health.Status}}' | grep -q 'healthy'; do sleep 5; echo 'Checking...'; done" || {
               echo "Nginx health check failed or timed out, attempting curl test..."
               # Fallback: Test Nginx directly with curl
               timeout 30s bash -c "until curl -s -f http://localhost:80; do sleep 5; echo 'Checking...'; done" || {
                 echo "Health check and curl test failed, rolling back..."
                 docker-compose down
-                if docker ps -a -q -f name=aff_infra_nginx_old; then
-                  docker rename aff_infra_nginx_old aff_infra_nginx-1 || true
-                  docker start aff_infra_nginx-1
+                if docker ps -a -q -f name=aff_infra-nginx_old; then
+                  docker rename aff_infra-nginx_old aff_infra-nginx-1 || true
+                  docker start aff_infra-nginx-1
                 fi
                 exit 1
               }
             }
 
             # Clean up old containers and images
-            docker container rm -f aff_infra_nginx_old || true
+            docker container rm -f aff_infra-nginx_old || true
             docker image prune -f
             docker container prune -f
 
