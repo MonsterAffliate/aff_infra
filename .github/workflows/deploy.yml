@@ -25,10 +25,19 @@ jobs:
 
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
-          # Run rsync separately to transfer files from runner to server
+
       - name: Sync files to server
         run: |
-          rsync -avz --progress --delete -e "ssh -i ${{ secrets.SSH_PRIVATE_KEY }} -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+          # Write SSH key to a temporary file
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/temp_ssh_key
+          chmod 600 ~/temp_ssh_key
+
+          # Run rsync with the temporary key file
+          rsync -avz --progress --delete -e "ssh -i ~/temp_ssh_key -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+
+          # Clean up the temporary key file
+          rm -f ~/temp_ssh_key
+        shell: /usr/bin/bash -e {0}
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
