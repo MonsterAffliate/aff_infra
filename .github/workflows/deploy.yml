@@ -34,7 +34,7 @@ jobs:
             docker compose up -d --build --force-recreate --remove-orphans
             
             # Wait for Nginx to be ready (simplified health check)
-            timeout 30s bash -c "until curl -s -f http://localhost:80; do sleep 2; echo 'Checking...'; done" || {
+            timeout 30s bash -c "until curl -s -f http://localhost:80/health; do sleep 2; echo 'Checking...'; done" || {
               echo "Deployment failed, rolling back..."
               docker compose down
               exit 1
