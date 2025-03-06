@@ -3,53 +3,44 @@ name: Deploy Nginx Reverse Proxy
 on:
   push:
     branches:
-      - master
+      - master  # Trigger on push to main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Transfer files and Deploy
-        uses: appleboy/ssh-action@v1.0.0
+      # Step 2: Set up SSH key
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
         with:
-          host: ${{ secrets.SERVER_DOMAIN }}
-          username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Create directory if it doesn't exist
+          known_hosts: unnecessary
+
+      # Step 3: Add Known Hosts
+      - name: Add Known Hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SERVER_DOMAIN }} >> ~/.ssh/known_hosts
+
+      # Step 4: Deploy with Docker Compose
+      - name: Deploy with Docker Compose
+        run: |
+          # Transfer files to server
+          rsync -avz --progress --delete -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
+
+          # SSH to deploy with minimal downtime
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }} << 'EOF'
             mkdir -p ~/aff_infra
             cd ~/aff_infra
 
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
 
-      - name: Sync files to server
-        run: |
-          # Write SSH key to a temporary file
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/temp_ssh_key
-          chmod 600 ~/temp_ssh_key
-
-          # Run rsync with the temporary key file
-          rsync -avz --progress --delete -e "ssh -i ~/temp_ssh_key -o StrictHostKeyChecking=no" ${{ github.workspace }}/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
-
-          # Clean up the temporary key file
-          rm -f ~/temp_ssh_key
-        shell: /usr/bin/bash -e {0}
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_DOMAIN }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/aff_infra
-            
-            # Pull and deploy
-            docker compose pull
+            # Pull and build images
+            docker-compose pull
             docker compose up -d --build --force-recreate --remove-orphans
             
             # Wait for Nginx to be ready
@@ -58,7 +49,8 @@ jobs:
               docker compose down
               exit 1
             }
-            
+
             # Cleanup
             docker image prune -f
             docker container prune -f
+          EOF
