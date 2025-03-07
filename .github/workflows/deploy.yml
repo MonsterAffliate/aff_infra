@@ -39,15 +39,7 @@ jobs:
 
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
-
-            # Install Docker and Docker Compose if not present
-            sudo apt update
-            sudo apt install -y docker.io docker-compose
-
-            # Ensure volume directories exist
-            sudo mkdir -p /home/gz/data/pornspotlight/assets /home/gz/data/pornspotlight/media
-            sudo chown -R $(whoami):$(whoami) /home/gz/data
-
+            
             # Pull and build images
             docker-compose pull
             docker-compose up -d --build --force-recreate --remove-orphans
