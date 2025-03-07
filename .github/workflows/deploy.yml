@@ -54,7 +54,9 @@ jobs:
             if ! crontab -l 2>/dev/null | grep -qF "$CRON_JOB"; then
               (crontab -l 2>/dev/null || echo ""; echo "$CRON_JOB") | crontab -
             fi
-            
+
             docker image prune -f
             docker container prune -f
+            docker volume prune -f
+            docker network prune -f
           EOF
