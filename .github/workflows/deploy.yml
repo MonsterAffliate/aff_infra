@@ -20,6 +20,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: unnecessary
 
+      - name: Generate .env file
+        run: |
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" > .env
+
       # Step 3: Add Known Hosts
       - name: Add Known Hosts
         run: |
