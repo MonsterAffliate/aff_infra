@@ -8,6 +8,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./conf.d:/etc/nginx/conf.d
+      - /home/gz/aff_sites/pornspotlight/assets/:/home/gz/aff_sites/pornspotlight/assets/
+      - /home/gz/aff_sites/pornspotlight/media/:/home/gz/aff_sites/pornspotlight/media/
     command: ["nginx", "-g", "daemon off;"]
     networks:
       - proxy-network
