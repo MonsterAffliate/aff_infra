@@ -3,17 +3,15 @@ name: Deploy Nginx Reverse Proxy
 on:
   push:
     branches:
-      - master  # Trigger on push to main branch
+      - master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up SSH key
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
         with:
@@ -23,13 +21,12 @@ jobs:
       - name: Generate .env file
         run: |
           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" > .env
+          echo "CERTBOT_EMAIL=${{ vars.CERTBOT_EMAIL }}" >> .env  # Add Certbot email
 
-      # Step 3: Add Known Hosts
       - name: Add Known Hosts
         run: |
           ssh-keyscan -H ${{ secrets.SERVER_DOMAIN }} >> ~/.ssh/known_hosts
 
-      # Step 4: Deploy with Docker Compose
       - name: Deploy with Docker Compose
         run: |
           # Transfer files to server
@@ -43,14 +40,27 @@ jobs:
             # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
 
+            # Install Docker and Docker Compose if not present
+            sudo apt update
+            sudo apt install -y docker.io docker-compose
+
+            # Ensure volume directories exist
+            sudo mkdir -p /home/gz/data/pornspotlight/assets /home/gz/data/pornspotlight/media
+            sudo chown -R $(whoami):$(whoami) /home/gz/data
+
             # Pull and build images
             docker-compose pull
-            docker compose up -d --build --force-recreate --remove-orphans
-            
-            # Wait for Nginx to be ready
-            timeout 30s bash -c "until curl -s -f http://localhost:80/health; do sleep 2; echo 'Checking...'; done" || {
+            docker-compose up -d --build --force-recreate --remove-orphans
+
+            # Wait for Certbot to generate certificates
+            sleep 30
+            docker-compose logs certbot
+
+            # Wait for Nginx to be ready with HTTPS
+            timeout 60s bash -c "until curl -s -f -k https://localhost:443/health; do sleep 2; echo 'Checking HTTPS...'; done" || {
               echo "Deployment failed, rolling back..."
-              docker compose down
+              docker-compose down
+              docker-compose logs nginx certbot
               exit 1
             }
 

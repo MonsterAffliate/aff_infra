@@ -10,7 +10,25 @@ services:
       - ./conf.d:/etc/nginx/conf.d
       - /home/gz/data/pornspotlight/assets/:/home/gz/data/pornspotlight/assets/
       - /home/gz/data/pornspotlight/media/:/home/gz/data/pornspotlight/media/
+      - certs:/etc/letsencrypt
     command: ["nginx", "-g", "daemon off;"]
+    networks:
+      - proxy-network
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - certs:/etc/letsencrypt
+      - ./conf.d:/etc/nginx/conf.d
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}  # Define the email as an env var
+    entrypoint: >
+      /bin/sh -c 'trap exit TERM; if [ ! -f /etc/letsencrypt/live/pornspotlight.link/fullchain.pem ]; then
+      certbot certonly --webroot -w /etc/nginx/conf.d -d pornspotlight.link -d www.pornspotlight.link
+      --email "$$CERTBOT_EMAIL" --agree-tos --no-eff-email; fi;
+      while :; do certbot renew && docker restart nginx; sleep 12h & wait $${!}; done;'
     networks:
       - proxy-network
 
@@ -42,4 +60,6 @@ networks:
 
 volumes:
   postgres-data:
+    driver: local
+  certs:
     driver: local
