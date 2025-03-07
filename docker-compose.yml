@@ -11,8 +11,6 @@ services:
     command: ["nginx", "-g", "daemon off;"]
     networks:
       - proxy-network
-    depends_on:
-      - pornspotlight-web
 
   redis:
     image: redis:latest
