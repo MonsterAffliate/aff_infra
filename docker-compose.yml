@@ -18,6 +18,20 @@ services:
     networks:
       - proxy-network
 
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=superuser  # Superuser for initial setup
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  # Change this!
+      - POSTGRES_DB=postgres  # Default DB (not used by apps)
+    volumes:
+      - /home/gz/aff_sites/postgres-data:/var/lib/postgresql/data
+    networks:
+      - proxy-network
+    command: >
+      postgres -c 'max_connections=200'
+
 networks:
   proxy-network:
     driver: bridge
