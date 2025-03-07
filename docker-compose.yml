@@ -21,14 +21,13 @@ services:
     volumes:
       - certs:/etc/letsencrypt
       - ./conf.d:/etc/nginx/conf.d
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./webroot:/webroot
     environment:
-      - CERTBOT_EMAIL=${CERTBOT_EMAIL}  # Define the email as an env var
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
     entrypoint: >
-      /bin/sh -c 'trap exit TERM; if [ ! -f /etc/letsencrypt/live/pornspotlight.link/fullchain.pem ]; then
-      certbot certonly --webroot -w /etc/nginx/conf.d -d pornspotlight.link -d www.pornspotlight.link
-      --email "$$CERTBOT_EMAIL" --agree-tos --no-eff-email; fi;
-      while :; do certbot renew && docker restart nginx; sleep 12h & wait $${!}; done;'
+      /bin/sh -c 'if [ ! -f /etc/letsencrypt/live/pornspotlight.link/fullchain.pem ]; then
+      certbot certonly --webroot -w /webroot -d pornspotlight.link -d www.pornspotlight.link
+      --email "$$CERTBOT_EMAIL" --agree-tos --no-eff-email; fi'
     networks:
       - proxy-network
 

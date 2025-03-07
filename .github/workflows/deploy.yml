@@ -29,26 +29,19 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
-          # Transfer files to server
           rsync -avz --progress --delete -e "ssh" ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }}:~/aff_infra/
-
-          # SSH to deploy with minimal downtime
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_DOMAIN }} << 'EOF'
             mkdir -p ~/aff_infra
             cd ~/aff_infra
 
-            # Store deployment version
             echo "${{ github.sha }}" > deploy_version.txt
-            
-            # Pull and build images
+
             docker-compose pull
             docker-compose up -d --build --force-recreate --remove-orphans
 
-            # Wait for Certbot to generate certificates
             sleep 30
             docker-compose logs certbot
 
-            # Wait for Nginx to be ready with HTTPS
             timeout 60s bash -c "until curl -s -f -k https://localhost:443/health; do sleep 2; echo 'Checking HTTPS...'; done" || {
               echo "Deployment failed, rolling back..."
               docker-compose down
@@ -56,7 +49,12 @@ jobs:
               exit 1
             }
 
-            # Cleanup
+            # Check if cron job exists, add only if missing
+            CRON_JOB="0 */12 * * * cd ~/aff_infra && docker-compose run --rm certbot renew --webroot -w /webroot && docker-compose restart nginx"
+            if ! crontab -l 2>/dev/null | grep -qF "$CRON_JOB"; then
+              (crontab -l 2>/dev/null || echo ""; echo "$CRON_JOB") | crontab -
+            fi
+            
             docker image prune -f
             docker container prune -f
           EOF
