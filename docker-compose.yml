@@ -17,7 +17,6 @@ services:
 
   certbot:
     image: certbot/certbot:latest
-    restart: unless-stopped
     volumes:
       - certs:/etc/letsencrypt
       - ./conf.d:/etc/nginx/conf.d

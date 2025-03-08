@@ -42,7 +42,7 @@ jobs:
             sleep 30
             docker-compose logs certbot
 
-            timeout 60s bash -c "until curl -s -f -k https://localhost:443/health; do sleep 2; echo 'Checking HTTPS...'; done" || {
+            timeout 60s bash -c "until curl -s -f -k http://localhost:80/health; do sleep 2; echo 'Checking HTTPS...'; done" || {
               echo "Deployment failed, rolling back..."
               docker-compose down
               docker-compose logs nginx certbot
