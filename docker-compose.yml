@@ -64,6 +64,7 @@ services:
       - N8N_PROTOCOL=https
       - NODE_ENV=production
       - WEBHOOK_URL=https://n8n.theintelliagents.com/
+      - NODE_FUNCTION_ALLOW_BUILTIN=fs,crypto,stream,http,https,url,zlib,tls
       - GENERIC_TIMEZONE=America/Los_Angeles
     volumes:
       - n8n_data:/home/node/.n8n
