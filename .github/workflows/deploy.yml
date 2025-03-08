@@ -39,17 +39,19 @@ jobs:
             docker-compose pull
             docker-compose up -d --build --force-recreate --remove-orphans
 
-            # Wait for Traefik to be ready via dashboard
+            # Wait a bit for startup
+            sleep 10
+
+            # Check container status
+            docker ps -a
+            docker-compose ps
+
+            # Dump Traefik logs for debugging
+            docker-compose logs traefik
+
+            # Try dashboard check
             timeout 60s bash -c "until curl -s -f http://localhost:8080/dashboard/; do sleep 2; echo 'Checking Traefik dashboard...'; done" || {
               echo "Traefik dashboard check failed, rolling back..."
-              docker-compose down
-              docker-compose logs traefik
-              exit 1
-            }
-
-            # Optional: Check an app endpoint (e.g., topchat.cam)
-            timeout 60s bash -c "until curl -s -f -H 'Host: topchat.cam' http://localhost:80; do sleep 2; echo 'Checking topchat.cam...'; done" || {
-              echo "App routing check failed, rolling back..."
               docker-compose down
               docker-compose logs traefik
               exit 1

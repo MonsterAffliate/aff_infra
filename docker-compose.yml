@@ -6,18 +6,20 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080" # Optional dashboard
+      - "8080:8080" # Dashboard port
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /home/gz/data/pornspotlight/assets/:/home/gz/data/pornspotlight/assets/
       - /home/gz/data/pornspotlight/media/:/home/gz/data/pornspotlight/media/
       - traefik-certs:/etc/traefik/certs
     command:
+      - "--log.level=DEBUG" # More verbose logs for troubleshooting
       - "--providers.docker=true"
       - "--providers.docker.network=proxy-network"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--api.dashboard=true"
+      - "--api=true" # Explicitly enable API
+      - "--api.dashboard=true" # Explicitly enable dashboard
       - "--certificatesresolvers.le.acme.email=${CERTBOT_EMAIL}"
       - "--certificatesresolvers.le.acme.storage=/etc/traefik/certs/acme.json"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
