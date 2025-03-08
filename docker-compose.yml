@@ -1,29 +1,32 @@
-version: "3"
 services:
-  traefik:
-    image: traefik:v2.11
+  nginx:
+    image: nginx:latest
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080" # Dashboard on default port, no conflict
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./conf.d:/etc/nginx/conf.d
       - /home/gz/data/pornspotlight/assets/:/home/gz/data/pornspotlight/assets/
       - /home/gz/data/pornspotlight/media/:/home/gz/data/pornspotlight/media/
-      - traefik-certs:/etc/traefik/certs
-    command:
-      - "--log.level=DEBUG"
-      - "--providers.docker=true"
-      - "--providers.docker.network=aff_infra_proxy-network" # Matches project-prefixed network
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--api=true"
-      - "--api.dashboard=true"
-      - "--api.insecure=true" # Dashboard on 8080 without auth (testing)
-      - "--certificatesresolvers.le.acme.email=${CERTBOT_EMAIL}"
-      - "--certificatesresolvers.le.acme.storage=/etc/traefik/certs/acme.json"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - certs:/etc/letsencrypt
+    command: ["nginx", "-g", "daemon off;"]
+    networks:
+      - proxy-network
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certs:/etc/letsencrypt
+      - ./conf.d:/etc/nginx/conf.d
+      - ./webroot:/webroot
+    environment:
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+    entrypoint: >
+      /bin/sh -c 'if [ ! -f /etc/letsencrypt/live/pornspotlight.link/fullchain.pem ]; then
+      certbot certonly --webroot -w /webroot -d pornspotlight.link -d www.pornspotlight.link
+      --email "$$CERTBOT_EMAIL" --agree-tos --no-eff-email; fi'
     networks:
       - proxy-network
 
@@ -51,9 +54,10 @@ services:
 
 networks:
   proxy-network:
+    driver: bridge
 
 volumes:
   postgres-data:
     driver: local
-  traefik-certs:
+  certs:
     driver: local
