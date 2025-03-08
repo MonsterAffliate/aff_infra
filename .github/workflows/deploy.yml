@@ -1,4 +1,4 @@
-name: Deploy Nginx Reverse Proxy
+name: Deploy Traefik Reverse Proxy
 
 on:
   push:
@@ -39,22 +39,14 @@ jobs:
             docker-compose pull
             docker-compose up -d --build --force-recreate --remove-orphans
 
-            sleep 30
-            docker-compose logs certbot
-
-            timeout 60s bash -c "until curl -s -f -k http://localhost:80/health; do sleep 2; echo 'Checking HTTPS...'; done" || {
+            # Wait for Traefik to be ready and health endpoint to respond
+            timeout 60s bash -c "until curl -s -f -k http://localhost:80/health; do sleep 2; echo 'Checking Traefik...'; done" || {
               echo "Deployment failed, rolling back..."
               docker-compose down
-              docker-compose logs nginx certbot
+              docker-compose logs traefik
               exit 1
             }
-
-            # Check if cron job exists, add only if missing
-            CRON_JOB="0 */12 * * * cd ~/aff_infra && docker-compose run --rm certbot renew --webroot -w /webroot && docker-compose restart nginx"
-            if ! crontab -l 2>/dev/null | grep -qF "$CRON_JOB"; then
-              (crontab -l 2>/dev/null || echo ""; echo "$CRON_JOB") | crontab -
-            fi
-
+              
             docker image prune -f
             docker container prune -f
             docker volume prune -f
