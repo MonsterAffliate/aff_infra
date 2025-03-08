@@ -25,7 +25,7 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
     entrypoint: >
       /bin/sh -c 'if [ ! -f /etc/letsencrypt/live/pornspotlight.link/fullchain.pem ]; then
-      certbot certonly --webroot -w /webroot -d pornspotlight.link -d www.pornspotlight.link
+      certbot certonly --webroot -w /webroot -d pornspotlight.link -d www.pornspotlight.link -d n8n.theintelliagents.com 
       --email "$$CERTBOT_EMAIL" --agree-tos --no-eff-email; fi'
     networks:
       - proxy-network
@@ -51,6 +51,20 @@ services:
       postgres -c 'max_connections=200'
     ports:
       - "5432:5432"
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"  # Still binds to localhost for security
+    environment:
+      - N8N_HOST=n8n.theintelliagents.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://n8n.theintelliagents.com/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+    volumes:
+      - n8n_data:/home/node/.n8n
 
 networks:
   proxy-network:
@@ -60,4 +74,6 @@ volumes:
   postgres-data:
     driver: local
   certs:
+    driver: local
+  n8n_data:
     driver: local
