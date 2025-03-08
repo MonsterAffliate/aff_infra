@@ -39,17 +39,11 @@ jobs:
             docker-compose pull
             docker-compose up -d --build --force-recreate --remove-orphans
 
-            # Wait a bit for startup
             sleep 10
-
-            # Check container status
             docker ps -a
-            docker-compose ps
-
-            # Dump Traefik logs for debugging
             docker-compose logs traefik
 
-            # Try dashboard check
+            # Check dashboard on port 8080
             timeout 60s bash -c "until curl -s -f http://localhost:8080/dashboard/; do sleep 2; echo 'Checking Traefik dashboard...'; done" || {
               echo "Traefik dashboard check failed, rolling back..."
               docker-compose down

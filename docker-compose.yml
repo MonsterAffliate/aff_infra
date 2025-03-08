@@ -6,20 +6,21 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080" # Dashboard port
+      - "8080:8080" # Dashboard on default port, no conflict
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /home/gz/data/pornspotlight/assets/:/home/gz/data/pornspotlight/assets/
       - /home/gz/data/pornspotlight/media/:/home/gz/data/pornspotlight/media/
       - traefik-certs:/etc/traefik/certs
     command:
-      - "--log.level=DEBUG" # More verbose logs for troubleshooting
+      - "--log.level=DEBUG"
       - "--providers.docker=true"
-      - "--providers.docker.network=proxy-network"
+      - "--providers.docker.network=aff_infra_proxy-network" # Matches project-prefixed network
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--api=true" # Explicitly enable API
-      - "--api.dashboard=true" # Explicitly enable dashboard
+      - "--api=true"
+      - "--api.dashboard=true"
+      - "--api.insecure=true" # Dashboard on 8080 without auth (testing)
       - "--certificatesresolvers.le.acme.email=${CERTBOT_EMAIL}"
       - "--certificatesresolvers.le.acme.storage=/etc/traefik/certs/acme.json"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
@@ -50,7 +51,6 @@ services:
 
 networks:
   proxy-network:
-    driver: bridge
 
 volumes:
   postgres-data:
